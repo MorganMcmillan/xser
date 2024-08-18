@@ -64,13 +64,15 @@ local function serialise(value)
         -- check empty table
         if next(value) == nil then return TYPE_TABLE_EMPTY end
 
-        local buffer
+        local buffer, k, v
         -- check only array
         if #value == 0 then -- this is a map
             buffer = {TYPE_TABLE_MAP}
-            for k, v in pairs(value) do
+            k, v = next(value)
+            while k do
                 buffer[#buffer+1] = serialise(k)
                 buffer[#buffer+1] = serialise(v)
+                k, v = next(value, k)
             end
             buffer[#buffer+1] = "\0"
             return concat(buffer)
@@ -89,9 +91,11 @@ local function serialise(value)
                 buffer[#buffer+1] = serialise(value[i])
             end
             buffer[#buffer+1] = "\0"
-            for k, v in pairs(value) do
+            k, v = next(value, #value)
+            while k do
                 buffer[#buffer+1] = serialise(k)
                 buffer[#buffer+1] = serialise(v)
+                k, v = next(value, k)
             end
             buffer[#buffer+1] = "\0"
             return concat(buffer)
