@@ -38,8 +38,8 @@ local function serialise(value)
                 return TYPE_U16 .. pack("<H", value)
             elseif value <= 4294967295 then
                 return TYPE_U32 .. pack("<I", value)
-            else
-                return TYPE_U64 .. pack("<J", value)
+            else -- 64 bit numbers cannot be represented in lua, so we use a double
+                return TYPE_F64 .. pack("<d", value)
             end
         else -- signed numbers
             if value >= -128 then
@@ -48,8 +48,8 @@ local function serialise(value)
                 return TYPE_I16 .. pack("<h", value)
             elseif value >= -2147483648 then
                 return TYPE_I32 .. pack("<i", value)
-            else
-                return TYPE_I64 .. pack("<j", value)
+            else -- 64 bit numbers cannot be represented in lua, so we use a double
+                return TYPE_F64 .. pack("<d", value)
             end
         end
     elseif type(value) == "boolean" then
@@ -116,23 +116,23 @@ local function deserialise(bin, pos)
 
     -- deserialise numbers
     elseif type == TYPE_U8 then
-        return unpack("<B", sub(bin, pos + 1)), pos + 1
+        return unpack("<B", sub(bin, pos + 1)), pos + 2
     elseif type == TYPE_I8 then
-        return unpack("<b", sub(bin, pos + 1)), pos + 1
+        return unpack("<b", sub(bin, pos + 1)), pos + 2
     elseif type == TYPE_U16 then
-        return unpack("<H", sub(bin, pos + 1)), pos + 2
+        return unpack("<H", sub(bin, pos + 1)), pos + 3
     elseif type == TYPE_I16 then
-        return unpack("<h", sub(bin, pos + 1)), pos + 2
+        return unpack("<h", sub(bin, pos + 1)), pos + 3
     elseif type == TYPE_U32 then
-        return unpack("<I", sub(bin, pos + 1)), pos + 4
+        return unpack("<I", sub(bin, pos + 1)), pos + 5
     elseif type == TYPE_I32 then
-        return unpack("<i", sub(bin, pos + 1)), pos + 4
+        return unpack("<i", sub(bin, pos + 1)), pos + 5
     elseif type == TYPE_U64 then
-        return unpack("<J", sub(bin, pos + 1)), pos + 8
+        return unpack("<J", sub(bin, pos + 1)), pos + 9
     elseif type == TYPE_I64 then
-        return unpack("<j", sub(bin, pos + 1)), pos + 8
+        return unpack("<j", sub(bin, pos + 1)), pos + 9
     elseif type == TYPE_F64 then
-        return unpack("<d", sub(bin, pos + 1)), pos + 8
+        return unpack("<d", sub(bin, pos + 1)), pos + 9
 
     -- deserialise booleans
     elseif type == TYPE_BOOL_FALSE then
@@ -151,12 +151,14 @@ local function deserialise(bin, pos)
     elseif type == TYPE_TABLE_EMPTY then
         return {}, pos + 1
     elseif type == TYPE_TABLE_ARRAY then
+        pos = pos + 1
         local array = {}
         while sub(bin, pos, pos) ~= "\0" do
             array[#array+1], pos = deserialise(bin, pos)
         end
         return array, pos
     elseif type == TYPE_TABLE_MAP then
+        pos = pos + 1
         local map = {}
         local k
         while sub(bin, pos, pos) ~= "\0" do
@@ -165,10 +167,12 @@ local function deserialise(bin, pos)
         end
         return map, pos
     elseif type == TYPE_TABLE_ARRAY_MAP then
+        pos = pos + 1
         local arrayMap = {}
         while sub(bin, pos, pos) ~= "\0" do
             arrayMap[#arrayMap+1], pos = deserialise(bin, pos)
         end
+        pos = pos + 1
         local k
         while sub(bin, pos, pos) ~= "\0" do
             k, pos = deserialise(bin, pos)
